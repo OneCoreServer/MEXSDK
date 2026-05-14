@@ -1,4 +1,4 @@
-name: NewBlackbox + Loader Android Build
+name: Build NewBlackbox AAR + Loader APK
 
 on:
   push:
@@ -18,8 +18,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-sdk-and-loader:
+  build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -38,7 +39,7 @@ jobs:
       - name: Accept SDK licenses
         run: yes | sdkmanager --licenses
 
-      - name: Install Android SDK components
+      - name: Install Android SDK / NDK components
         run: |
           sdkmanager \
             "platform-tools" \
@@ -47,29 +48,37 @@ jobs:
             "ndk;29.0.13846066" \
             "ndk;24.0.8215888"
 
-      - name: Grant Gradle wrapper execute permission
+      - name: Make Gradle wrappers executable
         run: |
           chmod +x gradlew
           chmod +x NewBlackbox/gradlew
 
-      - name: Build NewBlackbox Bcore AAR
+      - name: Build NewBlackbox Bcore release AAR
         working-directory: NewBlackbox
         run: ./gradlew --no-daemon :Bcore:assembleRelease
 
-      - name: Copy SDK AAR into loader
-        run: cp NewBlackbox/Bcore/build/outputs/aar/Bcore-release.aar app/libs/Bcore-release.aar
+      - name: Verify and replace loader AAR
+        run: |
+          AAR_SOURCE="NewBlackbox/Bcore/build/outputs/aar/Bcore-release.aar"
+          AAR_TARGET="app/libs/Bcore-release.aar"
 
-      - name: Build Loader APK
+          test -f "$AAR_SOURCE" || (echo "AAR not found: $AAR_SOURCE" && exit 1)
+
+          cp -f "$AAR_SOURCE" "$AAR_TARGET"
+          echo "Replaced loader AAR -> $AAR_TARGET"
+          ls -lh "$AAR_TARGET"
+
+      - name: Build loader debug APK
         run: ./gradlew --no-daemon :app:assembleDebug
 
-      - name: Upload SDK AAR
+      - name: Upload Bcore AAR artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: newblackbox-bcore-aar
+          name: newblackbox-bcore-release-aar
           path: NewBlackbox/Bcore/build/outputs/aar/Bcore-release.aar
 
-      - name: Upload Loader APK
+      - name: Upload loader debug APK artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
