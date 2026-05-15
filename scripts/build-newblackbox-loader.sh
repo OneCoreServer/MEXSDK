@@ -10,10 +10,14 @@ SDK_DIR="${SDK_DIR:-}"
 BCORE_VARIANT="${BCORE_VARIANT:-release}"
 LOADER_VARIANT="${LOADER_VARIANT:-release}"
 ALLOW_DEBUG_FALLBACK="${ALLOW_DEBUG_FALLBACK:-false}"
+FORCE_GENERATED_SIGNING="${FORCE_GENERATED_SIGNING:-false}"
 ROOT_LOCAL_PROPERTIES="$ROOT_DIR/local.properties"
 NEWBLACKBOX_LOCAL_PROPERTIES="$NEWBLACKBOX_DIR/local.properties"
+SIGNING_PROPERTIES="$ROOT_DIR/signing.properties"
 ROOT_LOCAL_BACKUP=""
 NEWBLACKBOX_LOCAL_BACKUP=""
+SIGNING_PROPERTIES_BACKUP=""
+SIGNING_PROPERTIES_CREATED="false"
 NEWBLACKBOX_AAR=""
 LOADER_OUTPUT_DIR=""
 GENERATED_SIGNING_DIR="$ROOT_DIR/build/generated-signing"
@@ -39,6 +43,13 @@ restore_local_properties() {
     rm -f "$NEWBLACKBOX_LOCAL_BACKUP"
   elif [[ -n "$SDK_DIR" ]]; then
     rm -f "$NEWBLACKBOX_LOCAL_PROPERTIES"
+  fi
+
+  if [[ -n "$SIGNING_PROPERTIES_BACKUP" ]]; then
+    cp "$SIGNING_PROPERTIES_BACKUP" "$SIGNING_PROPERTIES"
+    rm -f "$SIGNING_PROPERTIES_BACKUP"
+  elif [[ "$SIGNING_PROPERTIES_CREATED" == "true" ]]; then
+    rm -f "$SIGNING_PROPERTIES"
   fi
 }
 
@@ -153,20 +164,14 @@ prepare_loader_signing() {
   # available.  When signing values are not already supplied by the repo or
   # environment, create a disposable debug keystore so the APK can still be
   # produced and uploaded as a CI artifact.
-  local props_file="$ROOT_DIR/signing.properties"
   local configured_store=""
 
-  if [[ -f "$props_file" ]]; then
-    configured_store="$(sed -n 's/^storeFile=//p' "$props_file" | tail -n 1)"
+  if [[ "$FORCE_GENERATED_SIGNING" != "true" && -f "$SIGNING_PROPERTIES" ]]; then
+    configured_store="$(sed -n 's/^storeFile=//p' "$SIGNING_PROPERTIES" | tail -n 1)"
     if [[ -n "$configured_store" && -f "$ROOT_DIR/$configured_store" ]]; then
       echo "Using existing Loader signing keystore: $configured_store"
       return
     fi
-  fi
-
-  if [[ -n "${STORE_FILE:-}" && -f "$STORE_FILE" ]]; then
-    echo "Using Loader signing keystore from STORE_FILE."
-    return
   fi
 
   mkdir -p "$GENERATED_SIGNING_DIR"
@@ -187,7 +192,21 @@ prepare_loader_signing() {
       -dname "CN=Android Debug,O=Android,C=US"
   fi
 
-  echo "Generated disposable Loader signing keystore for this build."
+  if [[ -z "$SIGNING_PROPERTIES_BACKUP" && -f "$SIGNING_PROPERTIES" ]]; then
+    SIGNING_PROPERTIES_BACKUP="$(mktemp)"
+    cp "$SIGNING_PROPERTIES" "$SIGNING_PROPERTIES_BACKUP"
+  elif [[ ! -f "$SIGNING_PROPERTIES" ]]; then
+    SIGNING_PROPERTIES_CREATED="true"
+  fi
+
+  cat > "$SIGNING_PROPERTIES" <<EOF
+storeFile=$STORE_FILE
+storePassword=$STORE_PASSWORD
+keyAlias=$KEY_ALIAS
+keyPassword=$KEY_PASSWORD
+EOF
+
+  echo "Generated disposable Loader signing keystore and temporary signing.properties for this build."
 }
 
 prepare_loader_signing
