@@ -32,9 +32,30 @@ An advanced injector to inject games and apps via Virtual Space without rooting 
 
 
 ## 🗂️ Repository Structure Note
-- `NewBlackBox` contains the active SDK source used by the project.
+- `NewBlackbox/` contains the active SDK source used by the project.
 - `reference_sdk/` is kept only for reference/comparison; do not modify files there during normal development.
 - Remaining main source files (outside `reference_sdk`) are primarily for the loader/injector implementation.
+
+---
+
+
+## 📦 GitHub Build: NewBlackbox AAR + Loader APK
+Push your branch to GitHub or run the **Build NewBlackbox AAR + Loader APK** workflow manually from the Actions tab. The workflow does this automatically:
+
+1. Builds `NewBlackbox:Bcore` as an Android AAR.
+2. Copies the generated AAR over `app/libs/Bcore-release.aar` so the loader uses the fresh NewBlackbox SDK.
+3. Builds the loader APK.
+4. Uploads both files in the `newblackbox-aar-loader-apk` artifact.
+
+After the workflow finishes, open the run page, download **Artifacts → newblackbox-aar-loader-apk**, and extract it to get the Loader APK.
+
+For local builds, run:
+
+```bash
+SDK_DIR=/path/to/Android/Sdk ALLOW_DEBUG_FALLBACK=true scripts/build-newblackbox-loader.sh
+```
+
+The local output is written to `build/newblackbox-loader-artifacts/`.
 
 ---
 

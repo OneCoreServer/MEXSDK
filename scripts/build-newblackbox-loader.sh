@@ -16,6 +16,7 @@ ROOT_LOCAL_BACKUP=""
 NEWBLACKBOX_LOCAL_BACKUP=""
 NEWBLACKBOX_AAR=""
 LOADER_OUTPUT_DIR=""
+GENERATED_SIGNING_DIR="$ROOT_DIR/build/generated-signing"
 
 variant_capitalized() {
   local variant="$1"
@@ -145,6 +146,51 @@ build_loader() {
 
 prepare_local_properties
 set_artifact_paths
+
+prepare_loader_signing() {
+  # The loader build.gradle always assigns signingConfigs.release/debug.
+  # GitHub Actions and fresh clones can therefore fail if no keystore is
+  # available.  When signing values are not already supplied by the repo or
+  # environment, create a disposable debug keystore so the APK can still be
+  # produced and uploaded as a CI artifact.
+  local props_file="$ROOT_DIR/signing.properties"
+  local configured_store=""
+
+  if [[ -f "$props_file" ]]; then
+    configured_store="$(sed -n 's/^storeFile=//p' "$props_file" | tail -n 1)"
+    if [[ -n "$configured_store" && -f "$ROOT_DIR/$configured_store" ]]; then
+      echo "Using existing Loader signing keystore: $configured_store"
+      return
+    fi
+  fi
+
+  if [[ -n "${STORE_FILE:-}" && -f "$STORE_FILE" ]]; then
+    echo "Using Loader signing keystore from STORE_FILE."
+    return
+  fi
+
+  mkdir -p "$GENERATED_SIGNING_DIR"
+  export STORE_FILE="$GENERATED_SIGNING_DIR/debug-ci.jks"
+  export STORE_PASSWORD="${STORE_PASSWORD:-android}"
+  export KEY_ALIAS="${KEY_ALIAS:-androiddebugkey}"
+  export KEY_PASSWORD="${KEY_PASSWORD:-android}"
+
+  if [[ ! -f "$STORE_FILE" ]]; then
+    keytool -genkeypair -v \
+      -keystore "$STORE_FILE" \
+      -storepass "$STORE_PASSWORD" \
+      -keypass "$KEY_PASSWORD" \
+      -alias "$KEY_ALIAS" \
+      -keyalg RSA \
+      -keysize 2048 \
+      -validity 10000 \
+      -dname "CN=Android Debug,O=Android,C=US"
+  fi
+
+  echo "Generated disposable Loader signing keystore for this build."
+}
+
+prepare_loader_signing
 
 build_bcore
 
