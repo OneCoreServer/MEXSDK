@@ -21,6 +21,9 @@ jobs:
           java-version: '17'
           cache: gradle
 
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
@@ -37,7 +40,8 @@ jobs:
             "build-tools;34.0.0" \
             "build-tools;35.0.0" \
             "ndk;24.0.8215888" \
-            "ndk;27.0.12077973"
+            "ndk;27.0.12077973" \
+            "ndk;29.0.13846066"
 
       - name: Build NewBlackbox AAR and Loader APK
         run: |

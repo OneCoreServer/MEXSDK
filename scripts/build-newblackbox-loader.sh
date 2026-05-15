@@ -121,7 +121,7 @@ build_bcore() {
   local task=":Bcore:assemble$(variant_capitalized "$BCORE_VARIANT")"
   echo "==> Building NewBlackbox Bcore ${BCORE_VARIANT} AAR"
 
-  if run_gradle "$NEWBLACKBOX_DIR" "$task" --no-daemon; then
+  if run_gradle "$NEWBLACKBOX_DIR" "$task" --configure-on-demand --stacktrace --no-daemon; then
     return
   fi
 
@@ -129,7 +129,7 @@ build_bcore() {
     echo "Release Bcore build failed; retrying debug because ALLOW_DEBUG_FALLBACK=true."
     BCORE_VARIANT="debug"
     set_artifact_paths
-    run_gradle "$NEWBLACKBOX_DIR" :Bcore:assembleDebug --no-daemon
+    run_gradle "$NEWBLACKBOX_DIR" :Bcore:assembleDebug --configure-on-demand --stacktrace --no-daemon
     return
   fi
 
@@ -140,7 +140,7 @@ build_loader() {
   local task=":app:assemble$(variant_capitalized "$LOADER_VARIANT")"
   echo "==> Building Loader ${LOADER_VARIANT} APK"
 
-  if run_gradle "$ROOT_DIR" "$task" --no-daemon; then
+  if run_gradle "$ROOT_DIR" "$task" --stacktrace --no-daemon; then
     return
   fi
 
@@ -148,7 +148,7 @@ build_loader() {
     echo "Release Loader build failed; retrying debug because ALLOW_DEBUG_FALLBACK=true."
     LOADER_VARIANT="debug"
     set_artifact_paths
-    run_gradle "$ROOT_DIR" :app:assembleDebug --no-daemon
+    run_gradle "$ROOT_DIR" :app:assembleDebug --stacktrace --no-daemon
     return
   fi
 
