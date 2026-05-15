@@ -1,7 +1,10 @@
 #include <android/log.h>
 #include <errno.h>
 #include <sys/prctl.h>
+
+#if __has_include(<linux/seccomp.h>)
 #include <linux/seccomp.h>
+#endif
 
 #define SLOGI(...) __android_log_print(ANDROID_LOG_INFO, "SeccompBypass", __VA_ARGS__)
 
