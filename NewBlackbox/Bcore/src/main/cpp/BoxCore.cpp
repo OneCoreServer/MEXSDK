@@ -16,6 +16,10 @@
 #include "Utils/HexDump.h"
 #include "hidden_api.h"
 #include <sys/system_properties.h>
+#include <string>
+
+extern "C" jboolean nativeLoadGameLib(JNIEnv *env, jclass clazz, jstring packageName);
+extern "C" jboolean nativeInitSeccompBypass(JNIEnv *env, jclass clazz);
 
 struct {
     JavaVM *vm;
@@ -142,6 +146,8 @@ static JNINativeMethod gMethods[] = {
         {"disableHiddenApi", "()Z",                               (void *) disableHiddenApi},
         {"disableResourceLoading", "()Z",                         (void *) disableResourceLoading},
         {"ActivateSdkLog", "()Ljava/lang/String;",                 (void *) ActivateSdkLog},
+        {"loadGameLib", "(Ljava/lang/String;)Z",                  (void *) nativeLoadGameLib},
+        {"initSeccompBypass", "()Z",                             (void *) nativeInitSeccompBypass},
         {"hideXposed", "()V",                                     (void *) hideXposed},
         {"addIORule",  "(Ljava/lang/String;Ljava/lang/String;)V", (void *) addIORule},
         {"enableIO",   "()V",                                     (void *) enableIO},

@@ -49,6 +49,10 @@ public abstract class ClientConfiguration {
         return false;
     }
 
+    public boolean isEnableGamingMode() {
+        return false;
+    }
+
     
     public boolean requestInstallPackage(File file, int userId) {
         return false;
