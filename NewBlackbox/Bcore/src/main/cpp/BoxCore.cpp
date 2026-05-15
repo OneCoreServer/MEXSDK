@@ -18,8 +18,8 @@
 #include <sys/system_properties.h>
 #include <string>
 
-extern jboolean nativeLoadGameLib(JNIEnv *env, jclass clazz, jstring packageName);
-extern jboolean nativeInitSeccompBypass(JNIEnv *env, jclass clazz);
+extern "C" jboolean nativeLoadGameLib(JNIEnv *env, jclass clazz, jstring packageName);
+extern "C" jboolean nativeInitSeccompBypass(JNIEnv *env, jclass clazz);
 
 struct {
     JavaVM *vm;
