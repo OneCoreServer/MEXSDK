@@ -46,7 +46,15 @@ jobs:
       - name: Build NewBlackbox AAR and Loader APK
         run: |
           chmod +x gradlew NewBlackbox/gradlew scripts/build-newblackbox-loader.sh
-          SDK_DIR="$ANDROID_HOME" ALLOW_DEBUG_FALLBACK=true FORCE_GENERATED_SIGNING=true scripts/build-newblackbox-loader.sh
+          SDK_DIR="$ANDROID_HOME" ALLOW_DEBUG_FALLBACK=true scripts/build-newblackbox-loader.sh
+
+      - name: Verify Loader APK signature
+        run: |
+          set -euxo pipefail
+          APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          for apk in build/newblackbox-loader-artifacts/Loader-*.apk; do
+            "$APKSIGNER" verify --verbose --print-certs "$apk"
+          done
 
       - name: List build artifacts
         run: |

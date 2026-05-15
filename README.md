@@ -47,7 +47,7 @@ Push your branch to GitHub or run the **Build NewBlackbox AAR + Loader APK** wor
 3. Builds the loader APK.
 4. Uploads both files in the `newblackbox-aar-loader-apk` artifact.
 
-After the workflow finishes, open the run page, download **Artifacts → newblackbox-aar-loader-apk**, and extract it to get the Loader APK.
+After the workflow finishes, open the run page, download **Artifacts → newblackbox-aar-loader-apk**, and extract it to get the Loader APK. GitHub builds use the repo signing key in `signing.properties`/`keys/mundo.jks`; if you previously installed a CI APK signed with a generated temporary key, uninstall that old app once before installing the newly signed APK.
 
 For local builds, run:
 
