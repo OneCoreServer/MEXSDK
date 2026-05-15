@@ -4,15 +4,28 @@ shopt -s nullglob
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 NEWBLACKBOX_DIR="$ROOT_DIR/NewBlackbox"
-NEWBLACKBOX_AAR="$NEWBLACKBOX_DIR/Bcore/build/outputs/aar/Bcore-release.aar"
 LOADER_AAR="$ROOT_DIR/app/libs/Bcore-release.aar"
-LOADER_RELEASE_DIR="$ROOT_DIR/app/build/outputs/apk/release"
 ARTIFACTS_DIR="${ARTIFACTS_DIR:-$ROOT_DIR/build/newblackbox-loader-artifacts}"
 SDK_DIR="${SDK_DIR:-}"
+BCORE_VARIANT="${BCORE_VARIANT:-release}"
+LOADER_VARIANT="${LOADER_VARIANT:-release}"
+ALLOW_DEBUG_FALLBACK="${ALLOW_DEBUG_FALLBACK:-false}"
 ROOT_LOCAL_PROPERTIES="$ROOT_DIR/local.properties"
 NEWBLACKBOX_LOCAL_PROPERTIES="$NEWBLACKBOX_DIR/local.properties"
 ROOT_LOCAL_BACKUP=""
 NEWBLACKBOX_LOCAL_BACKUP=""
+NEWBLACKBOX_AAR=""
+LOADER_OUTPUT_DIR=""
+
+variant_capitalized() {
+  local variant="$1"
+  printf '%s%s' "${variant:0:1}" "${variant:1}" | awk '{print toupper(substr($0,1,1)) substr($0,2)}'
+}
+
+set_artifact_paths() {
+  NEWBLACKBOX_AAR="$NEWBLACKBOX_DIR/Bcore/build/outputs/aar/Bcore-${BCORE_VARIANT}.aar"
+  LOADER_OUTPUT_DIR="$ROOT_DIR/app/build/outputs/apk/${LOADER_VARIANT}"
+}
 
 restore_local_properties() {
   if [[ -n "$ROOT_LOCAL_BACKUP" ]]; then
@@ -85,8 +98,6 @@ run_gradle() {
 
   if [[ -n "${GRADLE_CMD:-}" ]]; then
     "$GRADLE_CMD" "$@"
-  elif command -v gradle >/dev/null 2>&1; then
-    gradle "$@"
   elif [[ -x ./gradlew ]]; then
     ./gradlew "$@"
   else
@@ -94,10 +105,48 @@ run_gradle() {
   fi
 }
 
-prepare_local_properties
+build_bcore() {
+  local task=":Bcore:assemble$(variant_capitalized "$BCORE_VARIANT")"
+  echo "==> Building NewBlackbox Bcore ${BCORE_VARIANT} AAR"
 
-echo "==> Building NewBlackbox Bcore release AAR"
-run_gradle "$NEWBLACKBOX_DIR" :Bcore:assembleRelease --no-daemon
+  if run_gradle "$NEWBLACKBOX_DIR" "$task" --no-daemon; then
+    return
+  fi
+
+  if [[ "$ALLOW_DEBUG_FALLBACK" == "true" && "$BCORE_VARIANT" != "debug" ]]; then
+    echo "Release Bcore build failed; retrying debug because ALLOW_DEBUG_FALLBACK=true."
+    BCORE_VARIANT="debug"
+    set_artifact_paths
+    run_gradle "$NEWBLACKBOX_DIR" :Bcore:assembleDebug --no-daemon
+    return
+  fi
+
+  return 1
+}
+
+build_loader() {
+  local task=":app:assemble$(variant_capitalized "$LOADER_VARIANT")"
+  echo "==> Building Loader ${LOADER_VARIANT} APK"
+
+  if run_gradle "$ROOT_DIR" "$task" --no-daemon; then
+    return
+  fi
+
+  if [[ "$ALLOW_DEBUG_FALLBACK" == "true" && "$LOADER_VARIANT" != "debug" ]]; then
+    echo "Release Loader build failed; retrying debug because ALLOW_DEBUG_FALLBACK=true."
+    LOADER_VARIANT="debug"
+    set_artifact_paths
+    run_gradle "$ROOT_DIR" :app:assembleDebug --no-daemon
+    return
+  fi
+
+  return 1
+}
+
+prepare_local_properties
+set_artifact_paths
+
+build_bcore
 
 if [[ ! -f "$NEWBLACKBOX_AAR" ]]; then
   echo "Expected NewBlackbox AAR was not produced: $NEWBLACKBOX_AAR" >&2
@@ -105,21 +154,21 @@ if [[ ! -f "$NEWBLACKBOX_AAR" ]]; then
 fi
 
 mkdir -p "$(dirname "$LOADER_AAR")" "$ARTIFACTS_DIR"
+rm -f "$ARTIFACTS_DIR"/*
 cp "$NEWBLACKBOX_AAR" "$LOADER_AAR"
-cp "$NEWBLACKBOX_AAR" "$ARTIFACTS_DIR/NewBlackbox-Bcore-release.aar"
+cp "$NEWBLACKBOX_AAR" "$ARTIFACTS_DIR/NewBlackbox-Bcore-${BCORE_VARIANT}.aar"
 echo "==> Replaced Loader AAR: $LOADER_AAR"
 
-echo "==> Building Loader release APK"
-run_gradle "$ROOT_DIR" :app:assembleRelease --no-daemon
+build_loader
 
-apk_files=("$LOADER_RELEASE_DIR"/*.apk)
+apk_files=("$LOADER_OUTPUT_DIR"/*.apk)
 if (( ${#apk_files[@]} == 0 )); then
-  echo "Loader build completed, but no APK was found in: $LOADER_RELEASE_DIR" >&2
+  echo "Loader build completed, but no APK was found in: $LOADER_OUTPUT_DIR" >&2
   exit 1
 fi
 
 for apk in "${apk_files[@]}"; do
-  cp "$apk" "$ARTIFACTS_DIR/Loader-$(basename "$apk")"
+  cp "$apk" "$ARTIFACTS_DIR/Loader-${LOADER_VARIANT}-$(basename "$apk")"
 done
 
 cat <<MSG

@@ -4,6 +4,7 @@ android {
     namespace 'top.niunaijun.blackbox'
 
     compileSdk rootProject.ext.compileSdkVersion
+    ndkVersion "27.0.12077973"
 
 
     aidlPackagedList "android/app/IServiceConnection.aidl"
@@ -35,7 +36,6 @@ android {
         ndkBuild {
             path 'src/main/cpp/Android.mk'
         }
-        ndkVersion = "29.0.13846066"
     }
 
     compileOptions {
