@@ -1,26 +1,14 @@
 name: Build NewBlackbox AAR + Loader APK
 
-on:
+"on":
   push:
-    paths:
-      - 'NewBlackbox/**'
-      - 'app/**'
-      - 'build.gradle'
-      - 'settings.gradle'
-      - '.github/workflows/newblackbox-android-build.yml'
   pull_request:
-    paths:
-      - 'NewBlackbox/**'
-      - 'app/**'
-      - 'build.gradle'
-      - 'settings.gradle'
-      - '.github/workflows/newblackbox-android-build.yml'
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -44,43 +32,19 @@ jobs:
           sdkmanager \
             "platform-tools" \
             "platforms;android-34" \
+            "platforms;android-35" \
             "build-tools;34.0.0" \
-            "ndk;29.0.13846066" \
-            "ndk;24.0.8215888"
+            "build-tools;35.0.0" \
+            "ndk;24.0.8215888" \
+            "ndk;27.0.12077973" \
+            "ndk;29.0.13846066"
 
-      - name: Make Gradle wrappers executable
-        run: |
-          chmod +x gradlew
-          chmod +x NewBlackbox/gradlew
+      - name: Build NewBlackbox AAR and Loader APK
+        run: SDK_DIR="$ANDROID_HOME" scripts/build-newblackbox-loader.sh
 
-      - name: Build NewBlackbox Bcore release AAR
-        working-directory: NewBlackbox
-        run: ./gradlew --no-daemon :Bcore:assembleRelease
-
-      - name: Verify and replace loader AAR
-        run: |
-          AAR_SOURCE="NewBlackbox/Bcore/build/outputs/aar/Bcore-release.aar"
-          AAR_TARGET="app/libs/Bcore-release.aar"
-
-          test -f "$AAR_SOURCE" || (echo "AAR not found: $AAR_SOURCE" && exit 1)
-
-          cp -f "$AAR_SOURCE" "$AAR_TARGET"
-          echo "Replaced loader AAR -> $AAR_TARGET"
-          ls -lh "$AAR_TARGET"
-
-      - name: Build loader debug APK
-        run: ./gradlew --no-daemon :app:assembleDebug
-
-      - name: Upload Bcore AAR artifact
-        if: always()
+      - name: Upload NewBlackbox AAR and Loader APK
         uses: actions/upload-artifact@v4
         with:
-          name: newblackbox-bcore-release-aar
-          path: NewBlackbox/Bcore/build/outputs/aar/Bcore-release.aar
-
-      - name: Upload loader debug APK artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: loader-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: newblackbox-aar-loader-apk
+          path: build/newblackbox-loader-artifacts/*
+          if-no-files-found: error
