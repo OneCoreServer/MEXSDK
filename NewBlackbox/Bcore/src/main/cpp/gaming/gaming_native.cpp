@@ -15,6 +15,3 @@ extern "C" jboolean nativeInitSeccompBypass(JNIEnv *, jclass) {
     return init_seccomp_bypass() ? JNI_TRUE : JNI_FALSE;
 }
 
-extern "C" jstring Java_com_yoursdk_ActivateSdkLog(JNIEnv *env, jclass) {
-    return env->NewStringUTF("https://akshit.dynamicflash.xyz/api/connect.php");
-}
