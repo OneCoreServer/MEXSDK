@@ -1,4 +1,5 @@
 apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
 
 android {
     namespace 'top.niunaijun.blackbox'
@@ -41,6 +42,10 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
     }
     
     
@@ -87,6 +92,9 @@ dependencies {
     implementation 'com.moandjiezana.toml:toml4j:0.7.2'
 
     implementation 'com.github.tiann:FreeReflection:3.2.2'
+    implementation 'net.lingala.zip4j:zip4j:2.11.5'
+    implementation 'androidx.core:core-ktx:1.15.0'
+    compileOnly 'org.lsposed.lsparanoid:core:0.5.2'
 
 
 
