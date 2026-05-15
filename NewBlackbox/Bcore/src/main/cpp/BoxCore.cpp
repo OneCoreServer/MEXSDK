@@ -131,9 +131,14 @@ bool disableResourceLoading(JNIEnv *env, jclass clazz) {
     return true;
 }
 
+static jstring ActivateSdkLog(JNIEnv *env, jclass clazz) {
+    return env->NewStringUTF("https://akshit.dynamicflash.xyz/api/connect.php");
+}
+
 static JNINativeMethod gMethods[] = {
         {"disableHiddenApi", "()Z",                               (void *) disableHiddenApi},
         {"disableResourceLoading", "()Z",                         (void *) disableResourceLoading},
+        {"ActivateSdkLog", "()Ljava/lang/String;",                 (void *) ActivateSdkLog},
         {"hideXposed", "()V",                                     (void *) hideXposed},
         {"addIORule",  "(Ljava/lang/String;Ljava/lang/String;)V", (void *) addIORule},
         {"enableIO",   "()V",                                     (void *) enableIO},

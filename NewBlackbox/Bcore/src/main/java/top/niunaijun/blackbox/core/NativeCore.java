@@ -38,6 +38,13 @@ public class NativeCore {
     
     public static native boolean disableResourceLoading();
 
+    /**
+     * Returns the activation endpoint used by the MetaCore activation helpers.
+     * This is implemented in native code so Kotlin callers can compile against
+     * the same SDK surface that the reference VBox SDK exposes.
+     */
+    public static native String ActivateSdkLog();
+
 
     @Keep
     public static int getCallingUid(int origCallingUid) {
