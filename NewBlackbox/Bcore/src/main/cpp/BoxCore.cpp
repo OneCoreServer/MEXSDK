@@ -15,6 +15,7 @@
 #include <Hook/RuntimeHook.h>
 #include "Utils/HexDump.h"
 #include "hidden_api.h"
+#include <sys/system_properties.h>
 
 struct {
     JavaVM *vm;
@@ -87,6 +88,8 @@ void hideXposed(JNIEnv *env, jclass clazz) {
 
 void init(JNIEnv *env, jobject clazz, jint api_level) {
     ALOGD("NativeCore init.");
+    __system_property_set("ro.hardware.egl", "android");
+    __system_property_set("ro.hardware.vulkan", "false");
     VMEnv.api_level = api_level;
     VMEnv.NativeCoreClass = (jclass) env->NewGlobalRef(env->FindClass(VMCORE_CLASS));
     VMEnv.getCallingUidId = env->GetStaticMethodID(VMEnv.NativeCoreClass, "getCallingUid", "(I)I");

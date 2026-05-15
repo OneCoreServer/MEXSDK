@@ -155,7 +155,7 @@ public class JarManager {
         }
         
         
-        copyJarFromAssets(context, jarDef, targetFile);
+        targetFile = copyJarFromAssets(context, jarDef, targetFile);
         
         
         if (!isFileValid(targetFile, jarDef)) {
@@ -170,9 +170,30 @@ public class JarManager {
     private File getTargetFile(JarConfig.JarDefinition jarDef) {
         return new File(BEnvironment.getCacheDir(), jarDef.getFileName());
     }
+
+    private File getFallbackTargetFile(Context context, JarConfig.JarDefinition jarDef) {
+        File filesDir = context.getFilesDir();
+        File dataDir = filesDir != null ? filesDir.getParentFile() : null;
+        if (dataDir != null) {
+            return new File(new File(dataDir, "blackbox/cache"), jarDef.getFileName());
+        }
+        return new File(new File(context.getCacheDir(), "blackbox"), jarDef.getFileName());
+    }
+
+    private boolean ensureDirectoryReady(File targetDir) {
+        if (targetDir == null) {
+            return false;
+        }
+        if (!targetDir.exists() && !targetDir.mkdirs()) {
+            return false;
+        }
+        targetDir.setReadable(true, false);
+        targetDir.setWritable(true, false);
+        targetDir.setExecutable(true, false);
+        return targetDir.isDirectory() && targetDir.canWrite();
+    }
     
-    
-    private void copyJarFromAssets(Context context, JarConfig.JarDefinition jarDef, File targetFile) throws IOException {
+    private File copyJarFromAssets(Context context, JarConfig.JarDefinition jarDef, File targetFile) throws IOException {
         String jarName = jarDef.getAssetName();
         InputStream inputStream = null;
         try {
@@ -184,13 +205,20 @@ public class JarManager {
             
             
             File targetDir = targetFile.getParentFile();
-            if (!targetDir.exists() && !targetDir.mkdirs()) {
-                throw new IOException("Failed to create target directory: " + targetDir);
+            if (!ensureDirectoryReady(targetDir)) {
+                File fallbackFile = getFallbackTargetFile(context, jarDef);
+                File fallbackDir = fallbackFile.getParentFile();
+                Log.w(TAG, "Failed to create target directory: " + targetDir
+                        + ", falling back to: " + fallbackDir);
+                if (!ensureDirectoryReady(fallbackDir)) {
+                    throw new IOException("Failed to create target directory: " + targetDir
+                            + " and fallback directory: " + fallbackDir);
+                }
+                targetFile = fallbackFile;
             }
             
-            
             JarUtils.copyFileWithProgress(inputStream, targetFile, jarName);
-            
+            return targetFile;
         } finally {
             if (inputStream != null) {
                 try {

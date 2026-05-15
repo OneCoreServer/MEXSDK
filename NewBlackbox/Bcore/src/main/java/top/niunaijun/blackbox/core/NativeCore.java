@@ -7,6 +7,7 @@ import android.util.Log;
 import androidx.annotation.Keep;
 
 import java.io.File;
+import java.lang.reflect.Method;
 import java.util.List;
 
 import dalvik.system.DexFile;
@@ -38,13 +39,33 @@ public class NativeCore {
     
     public static native boolean disableResourceLoading();
 
-    /**
-     * Returns the activation endpoint used by the MetaCore activation helpers.
-     * This is implemented in native code so Kotlin callers can compile against
-     * the same SDK surface that the reference VBox SDK exposes.
-     */
-    public static native String ActivateSdkLog();
+    public static boolean disableHiddenApiWithFallback() {
+        try {
+            if (disableHiddenApi()) {
+                return true;
+            }
+        } catch (Throwable e) {
+            Log.w(TAG, "Native hidden API bypass failed", e);
+        }
 
+        try {
+            Class<?> vmRuntimeClass = Class.forName("dalvik.system.VMRuntime");
+            Method getRuntime = vmRuntimeClass.getDeclaredMethod("getRuntime");
+            Method setHiddenApiExemptions = vmRuntimeClass.getDeclaredMethod(
+                    "setHiddenApiExemptions", String[].class);
+            getRuntime.setAccessible(true);
+            setHiddenApiExemptions.setAccessible(true);
+            Object runtime = getRuntime.invoke(null);
+            setHiddenApiExemptions.invoke(runtime, (Object) new String[]{"L"});
+            Log.i(TAG, "Hidden API exemptions enabled through VMRuntime reflection");
+            return true;
+        } catch (Throwable e) {
+            Log.w(TAG, "Hidden API VMRuntime reflection fallback failed", e);
+        }
+
+        Log.w(TAG, "Hidden API native and VMRuntime reflection fallbacks failed");
+        return false;
+    }
 
     @Keep
     public static int getCallingUid(int origCallingUid) {

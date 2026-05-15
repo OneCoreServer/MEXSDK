@@ -6,6 +6,50 @@
 #include "Utils/elf_util.h"
 #include "Log.h"
 
+
+static bool disable_hidden_api_by_vm_runtime(JNIEnv *env) {
+    jclass vm_runtime = env->FindClass("dalvik/system/VMRuntime");
+    if (!vm_runtime) {
+        env->ExceptionClear();
+        ALOGE("HiddenAPI: Failed to find VMRuntime class");
+        return false;
+    }
+
+    jmethodID get_runtime = env->GetStaticMethodID(vm_runtime, "getRuntime", "()Ldalvik/system/VMRuntime;");
+    jmethodID set_exemptions = env->GetMethodID(vm_runtime, "setHiddenApiExemptions", "([Ljava/lang/String;)V");
+    if (!get_runtime || !set_exemptions) {
+        env->ExceptionClear();
+        ALOGE("HiddenAPI: Failed to resolve VMRuntime exemption methods");
+        return false;
+    }
+
+    jobject runtime = env->CallStaticObjectMethod(vm_runtime, get_runtime);
+    if (env->ExceptionCheck() || !runtime) {
+        env->ExceptionClear();
+        ALOGE("HiddenAPI: Failed to obtain VMRuntime instance");
+        return false;
+    }
+
+    jclass string_class = env->FindClass("java/lang/String");
+    if (!string_class) {
+        env->ExceptionClear();
+        ALOGE("HiddenAPI: Failed to find String class for VMRuntime fallback");
+        return false;
+    }
+
+    jstring wildcard = env->NewStringUTF("L");
+    jobjectArray exemptions = env->NewObjectArray(1, string_class, wildcard);
+    env->CallVoidMethod(runtime, set_exemptions, exemptions);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        ALOGE("HiddenAPI: VMRuntime exemption call failed");
+        return false;
+    }
+
+    ALOGD("HiddenAPI: VMRuntime fallback successfully disabled hidden API restrictions");
+    return true;
+}
+
 bool disable_hidden_api(JNIEnv *env) {
     char version_str[PROP_VALUE_MAX];
     if (!__system_property_get("ro.build.version.sdk", version_str)) {
@@ -48,7 +92,7 @@ bool disable_hidden_api(JNIEnv *env) {
     
     if (!addr) {
         ALOGE("HiddenAPI: Didn't find setHiddenApiExemptions in any form");
-        return false;
+        return disable_hidden_api_by_vm_runtime(env);
     }
 
     jclass stringClass = env->FindClass("java/lang/String");

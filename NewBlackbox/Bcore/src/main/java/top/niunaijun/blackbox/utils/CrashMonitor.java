@@ -338,8 +338,9 @@ public class CrashMonitor {
             if (context == null) return;
             
             File logDir = new File(context.getFilesDir(), "crash_logs");
-            if (!logDir.exists()) {
-                logDir.mkdirs();
+            if (!logDir.exists() && !logDir.mkdirs()) {
+                Slog.w(TAG, "Unable to create crash log directory, falling back to files dir");
+                logDir = context.getFilesDir();
             }
             
             String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date(crashInfo.timestamp));

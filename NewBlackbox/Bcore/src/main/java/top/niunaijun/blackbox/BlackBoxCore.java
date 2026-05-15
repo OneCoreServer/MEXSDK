@@ -1323,9 +1323,13 @@ public class BlackBoxCore extends ClientConfiguration {
                     }
                 } else {
                     
-                    File docuentsdir = new File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "logs");
-                    if (!docuentsdir.exists()) {
-                        docuentsdir.mkdirs();
+                    File externalDocuments = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS);
+                    File docuentsdir = externalDocuments != null
+                            ? new File(externalDocuments, "logs")
+                            : new File(context.getFilesDir(), "logs");
+                    if (!docuentsdir.exists() && !docuentsdir.mkdirs()) {
+                        Slog.w(TAG, "Unable to create external log directory, falling back to files dir");
+                        docuentsdir = context.getFilesDir();
                     }
                     logFile = new File(docuentsdir, fileName);
                     FileUtils.deleteDir(logFile);
@@ -1656,7 +1660,7 @@ public class BlackBoxCore extends ClientConfiguration {
             throw new IllegalArgumentException("ClientConfiguration is null!");
         }
 
-        if(!NativeCore.disableHiddenApi()){
+        if (!NativeCore.disableHiddenApiWithFallback()) {
             try {
                 Reflection.unseal(context);
             } catch (Throwable t) {

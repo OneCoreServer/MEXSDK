@@ -50,6 +50,10 @@ public class SystemCallProvider extends ContentProvider {
                 if (extras != null) {
                     String name = extras.getString("_B_|_server_name_");
                     Slog.d(TAG, "Requesting service: " + name);
+                    if ("test".equals(name)) {
+                        Slog.d(TAG, "Test service not registered - returning empty health-check response");
+                        return bundle;
+                    }
                     IBinder service = ServiceManager.getService(name);
                     if (service != null) {
                         BundleCompat.putBinder(bundle, "_B_|_server_", service);
