@@ -1,4 +1,5 @@
 apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
 
 android {
     namespace 'top.niunaijun.blackbox'
@@ -27,7 +28,9 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled true
+            // Keep the SDK AAR unminified here; the loader app performs final shrinking.
+            // This also avoids CI/R8 failures from optional reflection/annotation-only classes.
+            minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -41,6 +44,10 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
     }
     
     
@@ -87,6 +94,9 @@ dependencies {
     implementation 'com.moandjiezana.toml:toml4j:0.7.2'
 
     implementation 'com.github.tiann:FreeReflection:3.2.2'
+    implementation 'net.lingala.zip4j:zip4j:2.11.5'
+    implementation 'androidx.core:core-ktx:1.15.0'
+    implementation 'org.lsposed.lsparanoid:core:0.5.2'
 
 
 
