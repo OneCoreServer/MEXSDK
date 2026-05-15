@@ -1,12 +1,14 @@
 package top.niunaijun.blackbox.core;
 
 
+import android.content.Context;
 import android.os.Process;
 import android.util.Log;
 
 import androidx.annotation.Keep;
 
 import java.io.File;
+import java.lang.reflect.Method;
 import java.util.List;
 
 import dalvik.system.DexFile;
@@ -38,6 +40,43 @@ public class NativeCore {
     
     public static native boolean disableResourceLoading();
 
+    public static boolean disableHiddenApiWithFallback(Context context) {
+        try {
+            if (disableHiddenApi()) {
+                return true;
+            }
+        } catch (Throwable e) {
+            Log.w(TAG, "Native hidden API bypass failed", e);
+        }
+
+        try {
+            Class<?> vmRuntimeClass = Class.forName("dalvik.system.VMRuntime");
+            Method getRuntime = vmRuntimeClass.getDeclaredMethod("getRuntime");
+            Method setHiddenApiExemptions = vmRuntimeClass.getDeclaredMethod(
+                    "setHiddenApiExemptions", String[].class);
+            getRuntime.setAccessible(true);
+            setHiddenApiExemptions.setAccessible(true);
+            Object runtime = getRuntime.invoke(null);
+            setHiddenApiExemptions.invoke(runtime, (Object) new String[]{"L"});
+            Log.i(TAG, "Hidden API exemptions enabled through VMRuntime reflection");
+            return true;
+        } catch (Throwable e) {
+            Log.w(TAG, "Hidden API VMRuntime reflection fallback failed", e);
+        }
+
+        if (context != null) {
+            try {
+                me.weishu.reflection.Reflection.unseal(context);
+                Log.i(TAG, "Hidden API exemptions enabled through FreeReflection fallback");
+                return true;
+            } catch (Throwable e) {
+                Log.w(TAG, "Hidden API FreeReflection fallback failed", e);
+            }
+        }
+
+        Log.w(TAG, "Hidden API bypass failed; continuing with guarded reflection only");
+        return false;
+    }
 
     @Keep
     public static int getCallingUid(int origCallingUid) {
