@@ -144,6 +144,17 @@ public class MethodParameterUtils {
         }
     }
 
+    public static void replaceLastUserId(Object[] args) {
+        if (args == null || args.length == 0) {
+            return;
+        }
+
+        int index = args.length - 1;
+        if (args[index] instanceof Integer) {
+            args[index] = BlackBoxCore.getHostUserId();
+        }
+    }
+
     public static int toInt(Object obj){
         if(obj instanceof Long){
             return ((Long) obj).intValue();

@@ -29,6 +29,12 @@ public final class BUserHandle implements Parcelable {
     
     public static final int USER_CURRENT_OR_SELF = -3;
 
+    /**
+     * Dedicated virtual user id used to store Xposed module state separately
+     * from normal app users.
+     */
+    public static final int USER_XPOSED = -4;
+
 
 
 

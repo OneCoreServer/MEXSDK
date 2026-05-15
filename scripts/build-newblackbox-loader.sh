@@ -10,12 +10,17 @@ SDK_DIR="${SDK_DIR:-}"
 BCORE_VARIANT="${BCORE_VARIANT:-release}"
 LOADER_VARIANT="${LOADER_VARIANT:-release}"
 ALLOW_DEBUG_FALLBACK="${ALLOW_DEBUG_FALLBACK:-false}"
+FORCE_GENERATED_SIGNING="${FORCE_GENERATED_SIGNING:-false}"
 ROOT_LOCAL_PROPERTIES="$ROOT_DIR/local.properties"
 NEWBLACKBOX_LOCAL_PROPERTIES="$NEWBLACKBOX_DIR/local.properties"
+SIGNING_PROPERTIES="$ROOT_DIR/signing.properties"
 ROOT_LOCAL_BACKUP=""
 NEWBLACKBOX_LOCAL_BACKUP=""
+SIGNING_PROPERTIES_BACKUP=""
+SIGNING_PROPERTIES_CREATED="false"
 NEWBLACKBOX_AAR=""
 LOADER_OUTPUT_DIR=""
+GENERATED_SIGNING_DIR="$ROOT_DIR/build/generated-signing"
 
 variant_capitalized() {
   local variant="$1"
@@ -38,6 +43,13 @@ restore_local_properties() {
     rm -f "$NEWBLACKBOX_LOCAL_BACKUP"
   elif [[ -n "$SDK_DIR" ]]; then
     rm -f "$NEWBLACKBOX_LOCAL_PROPERTIES"
+  fi
+
+  if [[ -n "$SIGNING_PROPERTIES_BACKUP" ]]; then
+    cp "$SIGNING_PROPERTIES_BACKUP" "$SIGNING_PROPERTIES"
+    rm -f "$SIGNING_PROPERTIES_BACKUP"
+  elif [[ "$SIGNING_PROPERTIES_CREATED" == "true" ]]; then
+    rm -f "$SIGNING_PROPERTIES"
   fi
 }
 
@@ -109,7 +121,7 @@ build_bcore() {
   local task=":Bcore:assemble$(variant_capitalized "$BCORE_VARIANT")"
   echo "==> Building NewBlackbox Bcore ${BCORE_VARIANT} AAR"
 
-  if run_gradle "$NEWBLACKBOX_DIR" "$task" --no-daemon; then
+  if run_gradle "$NEWBLACKBOX_DIR" "$task" --configure-on-demand --stacktrace --no-daemon; then
     return
   fi
 
@@ -117,7 +129,7 @@ build_bcore() {
     echo "Release Bcore build failed; retrying debug because ALLOW_DEBUG_FALLBACK=true."
     BCORE_VARIANT="debug"
     set_artifact_paths
-    run_gradle "$NEWBLACKBOX_DIR" :Bcore:assembleDebug --no-daemon
+    run_gradle "$NEWBLACKBOX_DIR" :Bcore:assembleDebug --configure-on-demand --stacktrace --no-daemon
     return
   fi
 
@@ -128,7 +140,7 @@ build_loader() {
   local task=":app:assemble$(variant_capitalized "$LOADER_VARIANT")"
   echo "==> Building Loader ${LOADER_VARIANT} APK"
 
-  if run_gradle "$ROOT_DIR" "$task" --no-daemon; then
+  if run_gradle "$ROOT_DIR" "$task" --stacktrace --no-daemon; then
     return
   fi
 
@@ -136,7 +148,7 @@ build_loader() {
     echo "Release Loader build failed; retrying debug because ALLOW_DEBUG_FALLBACK=true."
     LOADER_VARIANT="debug"
     set_artifact_paths
-    run_gradle "$ROOT_DIR" :app:assembleDebug --no-daemon
+    run_gradle "$ROOT_DIR" :app:assembleDebug --stacktrace --no-daemon
     return
   fi
 
@@ -145,6 +157,59 @@ build_loader() {
 
 prepare_local_properties
 set_artifact_paths
+
+prepare_loader_signing() {
+  # The loader build.gradle always assigns signingConfigs.release/debug.
+  # GitHub Actions and fresh clones can therefore fail if no keystore is
+  # available.  When signing values are not already supplied by the repo or
+  # environment, create a disposable debug keystore so the APK can still be
+  # produced and uploaded as a CI artifact.
+  local configured_store=""
+
+  if [[ "$FORCE_GENERATED_SIGNING" != "true" && -f "$SIGNING_PROPERTIES" ]]; then
+    configured_store="$(sed -n 's/^storeFile=//p' "$SIGNING_PROPERTIES" | tail -n 1)"
+    if [[ -n "$configured_store" && -f "$ROOT_DIR/$configured_store" ]]; then
+      echo "Using existing Loader signing keystore: $configured_store"
+      return
+    fi
+  fi
+
+  mkdir -p "$GENERATED_SIGNING_DIR"
+  export STORE_FILE="$GENERATED_SIGNING_DIR/debug-ci.jks"
+  export STORE_PASSWORD="${STORE_PASSWORD:-android}"
+  export KEY_ALIAS="${KEY_ALIAS:-androiddebugkey}"
+  export KEY_PASSWORD="${KEY_PASSWORD:-android}"
+
+  if [[ ! -f "$STORE_FILE" ]]; then
+    keytool -genkeypair -v \
+      -keystore "$STORE_FILE" \
+      -storepass "$STORE_PASSWORD" \
+      -keypass "$KEY_PASSWORD" \
+      -alias "$KEY_ALIAS" \
+      -keyalg RSA \
+      -keysize 2048 \
+      -validity 10000 \
+      -dname "CN=Android Debug,O=Android,C=US"
+  fi
+
+  if [[ -z "$SIGNING_PROPERTIES_BACKUP" && -f "$SIGNING_PROPERTIES" ]]; then
+    SIGNING_PROPERTIES_BACKUP="$(mktemp)"
+    cp "$SIGNING_PROPERTIES" "$SIGNING_PROPERTIES_BACKUP"
+  elif [[ ! -f "$SIGNING_PROPERTIES" ]]; then
+    SIGNING_PROPERTIES_CREATED="true"
+  fi
+
+  cat > "$SIGNING_PROPERTIES" <<EOF
+storeFile=$STORE_FILE
+storePassword=$STORE_PASSWORD
+keyAlias=$KEY_ALIAS
+keyPassword=$KEY_PASSWORD
+EOF
+
+  echo "Generated disposable Loader signing keystore and temporary signing.properties for this build."
+}
+
+prepare_loader_signing
 
 build_bcore
 
