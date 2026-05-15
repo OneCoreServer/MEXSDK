@@ -49,7 +49,7 @@ gaming/gaming_native.cpp
 
 LOCAL_C_INCLUDES += $(LOCAL_PATH)
 LOCAL_CFLAGS += -Wno-error=format-security -fvisibility=hidden -ffunction-sections -fdata-sections -w -std=c++17
-LOCAL_CPPFLAGS += -Wno-error=format-security -fvisibility=hidden -ffunction-sections -fdata-sections -w -Werror -fms-extensions
+LOCAL_CPPFLAGS += -Wno-error=format-security -fvisibility=hidden -ffunction-sections -fdata-sections -w -fms-extensions
 LOCAL_LDFLAGS += -Wl,--gc-sections,--strip-all,-z,max-page-size=16384
 LOCAL_ARM_MODE := arm
 
