@@ -1,7 +1,6 @@
 package top.niunaijun.blackbox.core;
 
 
-import android.content.Context;
 import android.os.Process;
 import android.util.Log;
 
@@ -40,7 +39,7 @@ public class NativeCore {
     
     public static native boolean disableResourceLoading();
 
-    public static boolean disableHiddenApiWithFallback(Context context) {
+    public static boolean disableHiddenApiWithFallback() {
         try {
             if (disableHiddenApi()) {
                 return true;
@@ -64,17 +63,7 @@ public class NativeCore {
             Log.w(TAG, "Hidden API VMRuntime reflection fallback failed", e);
         }
 
-        if (context != null) {
-            try {
-                me.weishu.reflection.Reflection.unseal(context);
-                Log.i(TAG, "Hidden API exemptions enabled through FreeReflection fallback");
-                return true;
-            } catch (Throwable e) {
-                Log.w(TAG, "Hidden API FreeReflection fallback failed", e);
-            }
-        }
-
-        Log.w(TAG, "Hidden API bypass failed; continuing with guarded reflection only");
+        Log.w(TAG, "Hidden API native and VMRuntime reflection fallbacks failed");
         return false;
     }
 

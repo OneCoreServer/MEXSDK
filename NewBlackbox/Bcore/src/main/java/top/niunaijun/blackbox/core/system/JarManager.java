@@ -172,9 +172,8 @@ public class JarManager {
     }
 
     private File getFallbackTargetFile(Context context, JarConfig.JarDefinition jarDef) {
-        File dataDir = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N
-                ? context.getDataDir()
-                : context.getFilesDir().getParentFile();
+        File filesDir = context.getFilesDir();
+        File dataDir = filesDir != null ? filesDir.getParentFile() : null;
         if (dataDir != null) {
             return new File(new File(dataDir, "blackbox/cache"), jarDef.getFileName());
         }
