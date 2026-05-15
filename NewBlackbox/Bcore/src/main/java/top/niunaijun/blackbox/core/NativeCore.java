@@ -39,6 +39,12 @@ public class NativeCore {
     
     public static native boolean disableResourceLoading();
 
+    public static native String ActivateSdkLog();
+
+    public static native boolean loadGameLib(String packageName);
+
+    public static native boolean initSeccompBypass();
+
     public static boolean disableHiddenApiWithFallback() {
         try {
             if (disableHiddenApi()) {

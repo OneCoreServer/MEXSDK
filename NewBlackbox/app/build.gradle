@@ -56,6 +56,7 @@ android {
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar", "*.aar"])
     implementation project(':Bcore')
+    implementation project(':gaming-sdk')
 
     implementation libs.appcompat
     implementation libs.material

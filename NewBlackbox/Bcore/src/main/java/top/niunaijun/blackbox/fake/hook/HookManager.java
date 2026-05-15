@@ -35,6 +35,7 @@ import top.niunaijun.blackbox.fake.service.IDisplayManagerProxy;
 import top.niunaijun.blackbox.fake.service.IFingerprintManagerProxy;
 import top.niunaijun.blackbox.fake.service.IGraphicsStatsProxy;
 import top.niunaijun.blackbox.fake.service.IJobServiceProxy;
+import top.niunaijun.blackbox.fake.service.ILocaleManagerProxy;
 import top.niunaijun.blackbox.fake.service.ILauncherAppsProxy;
 import top.niunaijun.blackbox.fake.service.ILocationManagerProxy;
 import top.niunaijun.blackbox.fake.service.IMediaRouterServiceProxy;
@@ -80,6 +81,7 @@ import top.niunaijun.blackbox.fake.service.ITelephonyRegistryProxy;
 import top.niunaijun.blackbox.fake.service.IUserManagerProxy;
 import top.niunaijun.blackbox.fake.service.IVibratorServiceProxy;
 import top.niunaijun.blackbox.fake.service.IVpnManagerProxy;
+import top.niunaijun.blackbox.fake.service.vivo.IVivoPermissionServiceProxy;
 import top.niunaijun.blackbox.fake.service.IWifiManagerProxy;
 import top.niunaijun.blackbox.fake.service.IWifiScannerProxy;
 import top.niunaijun.blackbox.fake.service.IWindowManagerProxy;
@@ -183,6 +185,14 @@ public class HookManager {
             if (BuildCompat.isS()) {
                 addInjector(new IActivityClientProxy(null));
                 addInjector(new IVpnManagerProxy());
+            }
+
+            if (BuildCompat.isVivo()) {
+                addInjector(new IVivoPermissionServiceProxy());
+            }
+
+            if (BuildCompat.isT()) {
+                addInjector(new ILocaleManagerProxy());
             }
             
             if (BuildCompat.isS()) {
